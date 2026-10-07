@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'hcm-trip-';
-const CACHE = CACHE_PREFIX + '2026-10-07-v3';
+const CACHE = CACHE_PREFIX + '2026-10-07-v4';
 const ASSETS = ['./', './index.html', './cloud-sync.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const scope = self.registration.scope;
 

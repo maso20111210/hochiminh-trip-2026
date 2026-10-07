@@ -15,7 +15,7 @@
 <style>
 :root{--bg:#f7f7fb;--card:#fff;--text:#222;--muted:#777;--line:#e8e8ef;--accent:#4f86c6;--day:#fff5cf;--locked:#ffe6e6}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;background:var(--bg);color:var(--text)}
+body{margin:0;overflow-x:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;background:var(--bg);color:var(--text)}
 .wrap{max-width:1240px;margin:0 auto;padding:22px}
 .hero{background:linear-gradient(135deg,#dceeff,#eef6ff);padding:22px 24px;border-radius:20px;margin-bottom:18px}
 h1{margin:0 0 8px;font-size:28px} .sub{color:var(--muted);font-size:14px;line-height:1.7}
@@ -459,6 +459,51 @@ body.is-editing tr:not(.day-data-anchor):not(.lodging):not(.day-header) td:nth-c
 body:not(.is-editing) tr td:nth-child(7){display:none !important}
 .delete-row-btn{width:40px;height:40px;line-height:40px}
 .drag::before, .day-header td::before, .lodging td::before{content:none !important}
+
+/* Use the same cells as stacked sections on narrow phones. */
+@media(max-width:640px){
+  .wrap{padding:12px !important;}
+  .table-wrap, table, tbody{width:100%;min-width:0;max-width:100%;}
+  table{display:block;}
+  tr:not(.day-header):not(.lodging):not(.day-data-anchor){
+    display:flex;flex-direction:column;align-items:stretch;gap:10px;
+    width:100%;min-width:0;padding:18px 16px;margin-bottom:14px;
+  }
+  tr.day1{background:#eef6ff !important;}
+  tr.day2{background:#fff0f6 !important;}
+  tr.day3{background:#eefaf3 !important;}
+  tr.flight-row{background:#eaf4ff !important;}
+  tr:not(.day-header):not(.lodging) td{
+    width:100% !important;min-width:0;max-width:100%;padding:0 !important;
+    word-break:normal;overflow-wrap:break-word;white-space:normal !important;
+  }
+  tr:not(.day-header):not(.lodging) td:nth-child(3){
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;
+  }
+  tr:not(.day-header):not(.lodging) td:nth-child(4),
+  body.is-editing tr:not(.day-header):not(.lodging) td:nth-child(4){
+    font-size:18px !important;font-weight:700;line-height:1.45;
+  }
+  tr:not(.day-header):not(.lodging) td:nth-child(4)::before,
+  tr:not(.day-header):not(.lodging) td:nth-child(5)::before{
+    display:block;margin-bottom:4px;font-size:15px;font-weight:700;line-height:1.45;
+  }
+  tr:not(.day-header):not(.lodging) td:nth-child(5){font-size:15px;line-height:1.55;}
+  .it-link{display:block;width:100%;min-width:0;font-weight:700;line-height:1.45;word-break:normal;overflow-wrap:break-word;}
+  .reserved-time-badge{flex:0 0 auto;width:auto;max-width:100%;margin:0;}
+  .transport-badge{display:inline-block;width:fit-content;max-width:100%;white-space:normal;overflow-wrap:break-word;line-height:1.45;}
+  .flight-details,.reservation-address{display:block;}
+  .mobile-line-separator{display:none;}
+  tr.day-header{margin:12px 0 8px !important;}
+  body.is-editing tr:not(.day-data-anchor):not(.lodging):not(.day-header) td.drag{
+    padding:0 44px 0 0 !important;min-height:40px;
+  }
+  body.is-editing tr:not(.day-data-anchor):not(.lodging):not(.day-header) td:nth-child(7){
+    width:40px !important;max-width:40px;
+  }
+  .edit-input{max-width:100%;min-width:0;}
+  .toolbar>*{min-width:0;max-width:100%;overflow-wrap:break-word;}
+}
 </style>
 </head>
 <body>
@@ -683,6 +728,10 @@ function renderNoteHTML(name, note){
     const clean = esc(line);
     if(/^(🚕|🚶)/.test(line.trim())){
       return `<span class="transport-badge">${clean}</span>`;
+    }
+    if(/^✅\s*已預約/.test(line.trim()) && line.includes("｜")){
+      const split=line.indexOf("｜");
+      return `<div>${esc(line.slice(0,split))}<span class="mobile-line-separator">｜</span><span class="reservation-address">${esc(line.slice(split+1))}</span></div>`;
     }
     return `<div>${clean}</div>`;
   }).join("");
@@ -915,10 +964,10 @@ function render() {
     if(!editing && r[4]){
       const a=document.createElement("a");
       a.className="it-link"; a.href=safeMapUrl(r[4]); a.target="_blank"; a.rel="noopener noreferrer";
-      a.textContent=r[2] || "";
+      a.innerHTML=itineraryHTML(r[2]);
       itTd.appendChild(a);
     } else {
-      itTd.innerHTML = esc(r[2]).replace(/\n/g,"<br>");
+      itTd.innerHTML = editing ? esc(r[2]).replace(/\n/g,"<br>") : itineraryHTML(r[2]);
       itTd.contentEditable = editing ? "true" : "false";
       itTd.addEventListener("input", e=>{rows[i][2]=e.target.innerText; save();});
     }
@@ -985,6 +1034,14 @@ function safeMapUrl(value){
     const url = new URL(value);
     return url.protocol === "https:" || url.protocol === "http:" ? url.href : "#";
   } catch(error){ return "#"; }
+}
+function itineraryHTML(value){
+  const text=String(value||"");
+  const split=text.search(/\d{1,2}:\d{2}起飛/);
+  if(split>0 && text[split-1]==="｜"){
+    return `${esc(text.slice(0,split-1))}<span class="mobile-line-separator">｜</span><span class="flight-details">${esc(text.slice(split))}</span>`;
+  }
+  return esc(text).replace(/\n/g,"<br>");
 }
 function moveRow(from, to){
   if(!rows[to] || from === to || isDayAnchor(to) || dayKeyForIndex(from) !== dayKeyForIndex(to)) return;
