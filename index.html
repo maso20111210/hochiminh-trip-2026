@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>胡志明 3天2夜行程</title>
+
+<meta name="theme-color" content="#dceeff">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<style>
+:root{--bg:#f7f7fb;--card:#fff;--text:#222;--muted:#777;--line:#e8e8ef;--accent:#4f86c6;--day:#fff5cf;--locked:#ffe6e6}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:1240px;margin:0 auto;padding:22px}
+.hero{background:linear-gradient(135deg,#dceeff,#eef6ff);padding:22px 24px;border-radius:20px;margin-bottom:18px}
+h1{margin:0 0 8px;font-size:28px} .sub{color:var(--muted);font-size:14px;line-height:1.7}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+button{border:0;border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+button.primary{background:var(--accent);color:white}
+.status{font-size:13px;color:var(--muted);align-self:center}
+.help{margin:0 0 15px;padding:12px 14px;border-radius:12px;background:#fff8dc;font-size:13px;line-height:1.7}
+.table-wrap{overflow:auto;background:var(--card);border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+table{width:100%;border-collapse:collapse;min-width:1080px}
+th,td{padding:12px 13px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+th{position:sticky;top:0;background:#5b9bd5;color:#fff;text-align:left;z-index:2}
+td:nth-child(1){width:145px;font-weight:700}
+td:nth-child(2){width:125px;white-space:nowrap}
+td:nth-child(3){width:300px}
+
+.day-row td{background:var(--day);font-weight:700}
+.locked-time{background:var(--locked)!important}
+.it-link{color:#1565c0;text-decoration:none;font-weight:700}
+.it-link:hover{text-decoration:underline}
+.url-link{font-size:12px;color:#1769aa;word-break:break-all}
+.mapbtn{display:inline-block;background:#eef5ff;color:#1769aa;text-decoration:none;font-weight:700;padding:7px 10px;border-radius:10px;margin-bottom:5px}
+.mapbtn:hover{background:#dcecff}
+.drag{cursor:grab;font-size:22px;color:#999;text-align:center;width:46px;user-select:none}
+tr.dragging{opacity:.45}
+tr.drop-target{outline:2px dashed #5b9bd5;outline-offset:-2px}
+.edit-input{width:100%;min-width:220px;padding:8px 9px;border:1px solid #d7d7df;border-radius:9px;font-size:12px}
+td[contenteditable="true"]{background:#fffdf1;outline:2px solid transparent}
+td[contenteditable="true"]:focus{outline-color:#ffd96b}
+.small{font-size:11px;color:#888}
+@media(max-width:700px){.wrap{padding:12px}h1{font-size:22px}}
+
+/* Day-based color system */
+tr.day1 td { background:#eef6ff; }
+tr.day2 td { background:#fff0f6; }
+tr.day3 td { background:#eefaf3; }
+tr.lodging td { background:#f4f1ff; }
+tr.day-header.day1 td { background:#cfe7ff !important; }
+tr.day-header.day2 td { background:#ffd9ea !important; }
+tr.day-header.day3 td { background:#d9f3e4 !important; }
+tr.lodging td { background:#e7defc !important; }
+
+.weather-note{
+  display:inline-flex; align-items:center; gap:6px;
+  margin-top:5px; padding:4px 8px; border-radius:999px;
+  font-size:12px; font-weight:800; background:#fff3cd; color:#7a5200;
+}
+.booking-chip{
+  display:inline-block; margin-left:6px; padding:2px 7px;
+  border-radius:999px; font-size:11px; font-weight:800;
+  background:#ffe0e0; color:#a32121;
+}
+.time-fixed{
+  display:inline-block; margin-left:5px; padding:2px 6px;
+  border-radius:999px; font-size:10px; font-weight:700;
+  background:#ffe6e6; color:#a33;
+}
+.it-link{
+  display:inline-block; color:#1558b0; text-decoration:none; font-weight:800;
+}
+.it-link::after{
+  content:" ↗";
+  font-size:12px; color:#6a7a90;
+}
+.it-link:hover{ text-decoration:underline; }
+tr.dragging{ opacity:.4; transform:scale(.995); }
+tr.drop-target{ outline:3px dashed #5b9bd5; outline-offset:-3px; }
+tr:hover td{ filter:brightness(.992); }
+.day-label{
+  font-weight:900; letter-spacing:.2px;
+}
+.mobile-hint{
+  display:none; margin:8px 0 0; font-size:12px; color:#667;
+}
+@media(max-width:760px){
+  .table-wrap{overflow:visible;background:transparent;box-shadow:none}
+  table{min-width:0}
+  thead{display:none}
+  tbody,tr,td{display:block;width:100%}
+  tr{
+    margin:0 0 12px; border-radius:16px; overflow:hidden;
+    box-shadow:0 3px 14px rgba(0,0,0,.07);
+  }
+  td{
+    border-bottom:1px solid rgba(0,0,0,.05);
+    padding:10px 12px;
+  }
+  td:first-child{position:absolute; right:14px; width:auto; background:transparent!important; border:0; z-index:2}
+  td:nth-child(2)::before{content:"日期｜";font-weight:700;color:#777}
+  td:nth-child(3)::before{content:"時間｜";font-weight:700;color:#777}
+  td:nth-child(4)::before{content:"行程｜";font-weight:700;color:#777}
+  td:nth-child(5)::before{content:"備註｜";font-weight:700;color:#777}
+  td:nth-child(6){display:none}
+  td:nth-child(7){display:none}
+  .mobile-hint{display:block}
+}
+
+
+.transport-chip{
+  display:inline-block;
+  margin-top:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  background:#eef1f5;
+  color:#4a5560;
+}
+
+
+/* Stronger reservation + timing guidance */
+.booking-chip{
+  display:inline-flex !important;
+  align-items:center;
+  gap:4px;
+  margin-left:8px;
+  padding:4px 9px !important;
+  border-radius:999px;
+  font-size:11px !important;
+  font-weight:900 !important;
+  background:#d93025 !important;
+  color:#fff !important;
+  box-shadow:0 2px 6px rgba(217,48,37,.22);
+}
+.depart-chip,
+.leave-chip{
+  display:inline-block;
+  margin-top:6px;
+  margin-right:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+.depart-chip{
+  background:#e8f3ff;
+  color:#165a9c;
+}
+.leave-chip{
+  background:#fff0d9;
+  color:#8a5400;
+}
+.short-address{
+  color:#606770;
+  font-size:13px;
+}
+.drag-denied{
+  animation:shake .25s linear 2;
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-4px)}
+  75%{transform:translateX(4px)}
+}
+
+
+/* ===== Mobile-first itinerary layout ===== */
+.table-wrap{
+  overflow:visible !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+table{
+  width:100% !important;
+  min-width:0 !important;
+  border-collapse:separate !important;
+  border-spacing:0 10px !important;
+}
+thead{display:none !important;}
+tbody{display:block;}
+tr{
+  display:grid;
+  grid-template-columns: 118px minmax(0,1.45fr) minmax(0,1fr);
+  gap:0;
+  margin:0 0 10px;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 3px 12px rgba(0,0,0,.06);
+}
+tr td{
+  display:block;
+  width:auto !important;
+  min-width:0;
+  padding:12px 12px !important;
+  border-bottom:0 !important;
+  line-height:1.45;
+  background:inherit;
+}
+tr td.drag{
+  display:none !important;
+}
+tr td:nth-child(2){ /* date cell hidden for normal rows */
+  display:none;
+}
+tr td:nth-child(3){ /* time */
+  grid-column:1;
+  white-space:nowrap !important;
+  font-weight:800;
+  font-size:14px;
+}
+tr td:nth-child(4){ /* itinerary */
+  grid-column:2;
+  font-size:15px;
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+tr td:nth-child(5){ /* notes */
+  grid-column:3;
+  font-size:13px;
+  color:#5f6670;
+  overflow-wrap:anywhere;
+}
+tr td:nth-child(6), tr td:nth-child(7){
+  display:none !important;
+}
+tr.day-header{
+  display:block !important;
+  margin-top:18px;
+  margin-bottom:8px;
+  box-shadow:none;
+  border-radius:18px;
+}
+tr.day-header td{
+  display:none !important;
+}
+tr.day-header td:nth-child(2){
+  display:block !important;
+  width:100% !important;
+  padding:15px 16px !important;
+  font-size:18px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+tr.day-header.day1 td:nth-child(2){background:#cfe7ff !important;}
+tr.day-header.day2 td:nth-child(2){background:#ffd9ea !important;}
+tr.day-header.day3 td:nth-child(2){background:#d9f3e4 !important;}
+tr.lodging{
+  display:block !important;
+  box-shadow:none;
+  margin-bottom:14px;
+}
+tr.lodging td{
+  display:none !important;
+}
+tr.lodging td:nth-child(4),
+tr.lodging td:nth-child(5){
+  display:block !important;
+  background:#e7defc !important;
+}
+tr.lodging td:nth-child(4){
+  border-radius:16px 16px 0 0;
+  font-size:16px;
+}
+tr.lodging td:nth-child(5){
+  border-radius:0 0 16px 16px;
+}
+.booking-chip{
+  vertical-align:middle;
+}
+.transport-note{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  font-weight:700;
+  color:#4f5965;
+}
+@media(max-width:720px){
+  .wrap{padding:10px !important;}
+  .hero{padding:16px !important;border-radius:16px !important;}
+  h1{font-size:21px !important;}
+  tr{
+    grid-template-columns: 102px minmax(0,1fr);
+  }
+  tr td:nth-child(3){grid-column:1;}
+  tr td:nth-child(4){grid-column:2;}
+  tr td:nth-child(5){
+    grid-column:1 / -1;
+    padding-top:0 !important;
+    font-size:12.5px;
+  }
+  tr td:nth-child(3){
+    font-size:13px;
+    padding-right:8px !important;
+  }
+  tr td:nth-child(4){
+    font-size:14.5px;
+  }
+  .toolbar{
+    gap:8px !important;
+  }
+  .toolbar button{
+    padding:9px 11px !important;
+    font-size:13px !important;
+  }
+}
+
+
+.reserved-time-badge{
+  display:inline-block;
+  margin-left:8px;
+  padding:4px 9px;
+  border-radius:999px;
+  background:#d93025;
+  color:#fff;
+  font-size:13px;
+  font-weight:900;
+  line-height:1.2;
+  vertical-align:middle;
+  box-shadow:0 2px 6px rgba(217,48,37,.22);
+}
+@media(max-width:720px){
+  .reserved-time-badge{
+    display:block;
+    width:max-content;
+    margin-left:0;
+    margin-top:5px;
+    font-size:13px;
+    padding:4px 8px;
+  }
+}
+
+
+.day-header td::after{
+  display:block;
+  margin-top:5px;
+  font-size:12px;
+  font-weight:800;
+  opacity:.82;
+}
+.day-header.day1 td::after{content:"🛬 抵達日｜固定預約為主";}
+.day-header.day2 td::after{content:"⛈️ 戶外拍照優先排上午";}
+.day-header.day3 td::after{content:"✈️ 回程日｜預留塞車＋提早到機場";}
+
+
+.delete-row-btn{
+  border:0;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  padding:0;
+  background:#ffe8e8;
+  color:#b42318;
+  font-size:20px;
+  font-weight:900;
+  line-height:34px;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);
+}
+@media(max-width:720px){
+  tr td:nth-child(7){
+    display:flex !important;
+    grid-column:1 / -1;
+    justify-content:flex-end;
+    align-items:center;
+    padding:0 10px 8px !important;
+    background:inherit !important;
+  }
+  tr.day-header td:nth-child(7),
+  tr.lodging td:nth-child(7){
+    display:none !important;
+  }
+}
+
+
+.flight-row{
+  background:#eaf4ff !important;
+  border-left:5px solid #6aa8e8;
+}
+.flight-row td{
+  background:#eaf4ff !important;
+}
+.flight-row td:nth-child(4){
+  font-weight:900;
+  color:#174f85;
+}
+
+
+/* Fix full-width date header */
+tr.day-header{
+  display:block !important;
+  width:100% !important;
+  margin:18px 0 8px !important;
+  box-shadow:none !important;
+  border-radius:18px !important;
+}
+tr.day-header td{
+  display:block !important;
+  width:100% !important;
+  padding:15px 16px !important;
+  font-size:18px !important;
+  font-weight:900 !important;
+  letter-spacing:.2px;
+  border-radius:18px !important;
+}
+tr.day-header.day1 td{background:#cfe7ff !important;}
+tr.day-header.day2 td{background:#ffd9ea !important;}
+tr.day-header.day3 td{background:#d9f3e4 !important;}
+
+
+.transport-badge{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  margin-top:6px;
+  padding:4px 8px;
+  border-radius:8px;
+  background:#edf2f7;
+  border:1px solid #d7dee8;
+  color:#44505c;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.2;
+}
+
+
+/* Pure DAY data rows are used only to generate full-width date bars */
+tr.day-data-anchor{display:none !important;}
+
+
+tr td:nth-child(3):empty{
+  opacity:.55;
+}
+
+/* Keep edit controls accessible at every viewport size. */
+tr{position:relative}
+tr.day-header td:first-child{position:static}
+tr td:nth-child(3){white-space:normal !important;overflow-wrap:anywhere}
+.edit-input{min-width:0;font-size:16px}
+td[contenteditable="true"]{font-size:16px !important}
+body.is-editing tr:not(.day-data-anchor):not(.lodging):not(.day-header) td.drag{
+  display:block !important;position:static;grid-column:1 / -1;
+  padding:4px 12px !important;min-height:44px;text-align:left;touch-action:none;
+}
+body.is-editing tr:not(.day-data-anchor):not(.day-header) td:nth-child(6){
+  display:block !important;grid-column:1 / -1;
+}
+body.is-editing tr:not(.day-data-anchor):not(.lodging):not(.day-header) td:nth-child(7){
+  display:flex !important;position:absolute;top:4px;right:8px;padding:0 !important;z-index:3;
+}
+body:not(.is-editing) tr td:nth-child(7){display:none !important}
+.delete-row-btn{width:40px;height:40px;line-height:40px}
+.drag::before, .day-header td::before, .lodging td::before{content:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>🇻🇳 胡志明 3天2夜行程</h1>
+    
+  </div>
+
+  <div class="toolbar">
+    <button id="editBtn" class="primary">✏️ 開始編輯</button>
+    <button id="recalcBtn">🕒 重新計算時間</button>
+    <button id="addBtn">➕ 新增一列</button>
+    <button id="resetBtn">↩️ 還原原始內容</button>
+    <button id="exportBtn">💾 匯出備份</button>
+    <span id="status" class="status">目前為瀏覽模式</span>
+  </div>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>拖拉</th><th>日期</th><th>時間</th><th>行程</th><th>備註</th><th>設定</th><th>操作</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+</div>
+
+<script>
+const original = [["住宿", "", "🏨 ZENITY", "📍608 Đường Võ Văn Kiệt, Ho Chi Minh City", "https://maps.google.com/?q=608+Vo+Van+Kiet+Ho+Chi+Minh", 0, true], ["10/9（五）DAY 1", "", "", "", "", 0, false], ["", "07:20", "🛫 抵達桃園機場 T2", "準備報到、托運行李、安檢", "https://maps.google.com/?q=Taiwan+Taoyuan+International+Airport+Terminal+2", 120, true], ["", "09:20", "✈️ 桃園 → 胡志明｜長榮 BR391｜9:20起飛－11:40抵達", "TPE 桃園機場 → SGN 新山一國際機場 T2｜手提 7KG、託運 23KG", "", 0, true], ["", "12:30～13:20", "🚕 前往 ZENITY", "先放行李", "https://maps.google.com/?q=608+Vo+Van+Kiet+Ho+Chi+Minh", 50, false], ["", "14:00", "💅 Little Beauty｜美甲＋美睫", "✅ 已預約 PM 2:00｜176 Lê Lai, Bến Thành", "https://maps.google.com/?q=176+Le+Lai+Ho+Chi+Minh", 120, true], ["", "16:00～16:20", "👠 NAGASHOES Nguyễn Trãi", "📍26 Nguyễn Trãi, Bến Thành", "https://maps.google.com/?q=NAGASHOES+26+Nguyen+Trai+Ho+Chi+Minh", 20, false], ["", "16:20～16:45", "👗 ELYN - QUẬN 1", "📍57 Nguyễn Trãi, Bến Thành", "https://maps.google.com/?q=ELYN+57+Nguyen+Trai+Ho+Chi+Minh", 25, false], ["", "17:00", "🍕 Pizza 4P’s Le Thanh Ton", "✅ 已預約 PM 5:00｜Hẻm 8/15 Lê Thánh Tôn\n🕒 營業時間 11:00～23:00｜最後點餐 22:30", "https://maps.google.com/?q=Pizza+4Ps+Le+Thanh+Ton+Ho+Chi+Minh", 90, true], ["", "18:30～20:30", "🛍️ 第一郡自由活動", "使用妳指定的 Google Maps 地點", "https://maps.app.goo.gl/43rD7RBQAM5Tzd7U6", 120, false], ["", "21:00", "🎉 Bùi Viện Walking Street", "范五老街／酒吧一條街｜建議 Grab 上下車定位：23/9 公園", "https://maps.google.com/?q=Bui+Vien+Walking+Street+Ho+Chi+Minh", 120, true], ["", "23:00", "💆 洗頭按摩 → 回家睡覺覺", "營業到 02:00", "https://www.google.com/maps?cid=5080874049103554919", 90, false], ["10/10（六）DAY 2", "", "", "", "", 0, false], ["", "07:30", "🚕 從 ZENITY 出發", "前往 NaH Makeup Academy\n🚕 Grab 約 10～15 分鐘", "https://maps.google.com/?q=NaH+Makeup+Academy+69+Tan+Vinh+Ho+Chi+Minh", 30, true], ["", "08:00", "💄 NaH Makeup Academy｜妝髮", "✅ 已預約 AM 8:00｜69 Tân Vĩnh, Khánh Hội｜妝髮約 2～2.5 小時", "https://maps.google.com/?q=69+Tan+Vinh+Ho+Chi+Minh", 150, true], ["", "10:30～11:00", "🥖 好吃法國麵包｜早餐", "化妝後先吃早餐｜🚶 步行／Grab 依現場距離\n🕒 營業時間：請點行程開 Google Maps 查看當日營業", "https://www.google.com/maps?cid=14194176294383005816", 30, false], ["", "11:15～11:45", "💗 粉紅教堂", "上午先拍戶外，避午後雷陣雨", "https://maps.google.com/?q=Tan+Dinh+Church+Ho+Chi+Minh", 30, false], ["", "11:50～12:20", "☕ Café Linh", "粉紅教堂 → 中央郵局中間休息\n🕒 營業時間 06:30～02:00", "https://maps.google.com/?q=Cafe+Linh+26A+Pham+Ngoc+Thach+Ho+Chi+Minh", 30, false], ["", "12:30～13:05", "📮 西貢中央郵局", "拍照＋簡單逛", "https://maps.google.com/?q=Saigon+Central+Post+Office+Ho+Chi+Minh", 35, false], ["", "13:15～14:45", "🍜 濱城市場", "午餐＋伴手禮｜午餐：烤肉米線、越南煎餅、生春捲、蟹肉番茄米線湯、越南甜湯；3人可點：烤肉米線×2＋越南煎餅×1＋生春捲×1＋甜湯。伴手禮：越南咖啡、腰果、乾果、胡椒／香料、茶、小紀念品", "https://maps.google.com/?q=Ben+Thanh+Market+Ho+Chi+Minh", 90, false], ["", "15:00～16:30", "👟 The New Playground｜潮牌公寓", "潮牌／服飾／選物", "https://maps.google.com/?q=The+New+Playground+26+Ly+Tu+Trong+Ho+Chi+Minh", 90, false], ["", "16:45～18:30", "☕ The Cafe Apartment｜咖啡公寓", "📍42 Nguyễn Huệ｜逛店＋喝咖啡\n🚶 步行約 8～12 分鐘", "https://maps.google.com/?q=The+Cafe+Apartment+42+Nguyen+Hue+Ho+Chi+Minh", 105, false], ["", "19:30～21:00", "🍽️ 晚餐", "彈性決定", "", 90, false], ["", "21:00～22:30", "💆 按摩", "第一天已去 Bùi Viện，第二晚不硬排", "https://www.google.com/maps?cid=9495426278616486201", 90, false], ["10/11（日）DAY 3", "", "", "", "", 0, false], ["", "08:00～08:45", "🧳 起床＋整理行李", "行李先放住宿", "", 45, false], ["", "09:00～10:00", "☕ Chez Mimosa Cafe & Breakfast", "第三天早餐\n🕒 營業時間 06:30～15:30", "https://maps.google.com/?q=Chez+Mimosa+Cafe+Breakfast+90+De+Tham+Ho+Chi+Minh", 60, false], ["", "10:00～10:30", "🏨 回 ZENITY", "退房＋拿行李", "https://maps.google.com/?q=608+Vo+Van+Kiet+Ho+Chi+Minh", 30, false], ["", "10:30～12:00", "🛒 機場附近大賣場｜三選一", "帶行李採買後直接前往機場", "", 90, false], ["", "", "① 樂天瑪特 Lotte Mart Tân Bình", "📍20 Cộng Hòa｜大型超市、伴手禮選擇多｜可先向服務台詢問大型行李寄放", "https://maps.google.com/?q=Lotte+Mart+Tan+Binh+20+Cong+Hoa+Ho+Chi+Minh", 0, false], ["", "", "② AEON Mall Tân Phú", "📍30 Tân Thắng｜商場＋AEON 超市｜有 E-Locker，寄物資訊較明確", "https://maps.google.com/?q=AEON+Mall+Tan+Phu+30+Tan+Thang+Ho+Chi+Minh", 0, false], ["", "", "③ Menas Mall Saigon Airport", "📍60A Trường Sơn｜離機場最近｜內有 Mena Gourmet", "https://maps.google.com/?q=Menas+Mall+Saigon+Airport+60A+Truong+Son+Ho+Chi+Minh", 0, false], ["", "12:00～12:30", "🚕 前往機場", "預留塞車時間", "https://maps.google.com/?q=Tan+Son+Nhat+International+Airport", 30, false], ["", "約 13:00", "✈️ 抵達機場", "國際線提早報到", "https://maps.google.com/?q=Tan+Son+Nhat+International+Airport", 165, true], ["", "15:45", "✈️ 胡志明 → 桃園｜長榮 BR396｜15:45起飛－20:10抵達", "SGN 新山一國際機場 → TPE 桃園機場｜手提 7KG、託運 23KG", "", 0, true]];
+const KEY = "hcm_itinerary_supermarkets_v1";
+function copyOriginal(){ return JSON.parse(JSON.stringify(original)); }
+function loadRows(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if(Array.isArray(saved) && saved.length && saved.every(r => Array.isArray(r) && r.length === 7)) return saved;
+  } catch(error) { console.warn('Could not load saved itinerary', error); }
+  return copyOriginal();
+}
+let rows = loadRows();
+let editing = false;
+let dragIndex = null;
+const tbody = document.getElementById("tbody");
+const statusEl = document.getElementById("status");
+const editBtn = document.getElementById("editBtn");
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(rows)); }
+  catch(error){ statusEl.textContent = "無法儲存，請匯出備份"; return; }
+  statusEl.textContent = editing ? "編輯模式｜已自動儲存" : "瀏覽模式｜內容已儲存";
+}
+function parseStart(t) {
+  const m = String(t||"").match(/(\d{1,2}):(\d{2})/);
+  return m ? (+m[1]*60 + +m[2]) : null;
+}
+function fmt(min) {
+  min = ((min % 1440) + 1440) % 1440;
+  const h = Math.floor(min/60), m = min%60;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+
+function validateChronologicalOrder(){
+  const issues = [];
+  let currentDay = "";
+  let last = -1;
+  for(let i=0;i<rows.length;i++){
+    const d = String(rows[i][0]||"");
+    if(d.includes("DAY")){
+      currentDay = d;
+      last = -1;
+      continue;
+    }
+    if(currentDay==="") continue;
+    const st = parseStart(rows[i][1]);
+    if(st===null) continue;
+    if(st < last){
+      issues.push(i);
+    } else {
+      last = st;
+    }
+  }
+  return issues;
+}
+
+function recalcTimes() {
+  // Recalculate separately inside each day section; fixed-time rows act as anchors.
+  let current = null;
+  for (let i=0;i<rows.length;i++) {
+    const r = rows[i];
+    if (r[0] === "住宿") continue;
+    const startsDay = r[0] && String(r[0]).includes("DAY");
+    if (startsDay) {
+      current = parseStart(r[1]);
+      if (r[6] && current !== null) current += (Number(r[5])||0);
+      continue;
+    }
+    if (r[6]) {
+      const locked = parseStart(r[1]);
+      if (locked !== null) current = locked + (Number(r[5])||0);
+      continue;
+    }
+    if (current === null) continue;
+    const dur = Number(r[5]) || 0;
+    if(dur === 0 && !r[1]) continue;
+    r[1] = dur > 0 ? `${fmt(current)}～${fmt(current+dur)}` : fmt(current);
+    current += dur;
+  }
+  save(); render();
+  const issues = validateChronologicalOrder();
+  if(issues.length){
+    statusEl.textContent = "⚠️ 有行程時間不是依序排列，請調整順序或時間";
+  }
+}
+
+function transportText(name){ return ''; }
+
+
+function dayKeyForIndex(i){
+  for(let k=i;k>=0;k--){
+    const d = String(rows[k][0]||"");
+    if(d.includes("10/9") || d.includes("DAY 1")) return "day1";
+    if(d.includes("10/10") || d.includes("DAY 2")) return "day2";
+    if(d.includes("10/11") || d.includes("DAY 3")) return "day3";
+    if(d==="住宿") return "lodging";
+  }
+  return "";
+}
+function isDayAnchor(i){
+  const d = String(rows[i]?.[0]||"");
+  return d==="住宿" || d.includes("DAY 1") || d.includes("DAY 2") || d.includes("DAY 3");
+}
+function transportMinutes(name){
+  const n = String(name||"");
+  const rules = [
+    ["前往 ZENITY",35],
+    ["Little Beauty",15],
+    ["NAGASHOES",8],
+    ["ELYN",8],
+    ["Pizza 4P’s",15],
+    ["第一郡自由活動",12],
+    ["Bùi Viện Walking Street",15],
+    ["23/9 公園",5],
+    ["NaH Makeup",15],
+    ["粉紅教堂",20],
+    ["Café Linh",8],
+    ["西貢中央郵局",10],
+    ["濱城市場",10],
+    ["The New Playground",8],
+    ["The Cafe Apartment",10],
+    ["Nguyễn Huệ 周邊",5],
+    ["Chez Mimosa",10],
+    ["回 ZENITY",10],
+    ["大賣場採買",30],
+    ["前往機場",10],
+    ["抵達機場",10]
+  ];
+  for(const [k,v] of rules){ if(n.includes(k)) return v; }
+  return 0;
+}
+
+function defaultTransportNote(name){
+  const n = String(name||"");
+  const rules = [
+    ["前往 ZENITY","🚕 Grab 約 30～40 分鐘"],
+    ["Little Beauty","🚕 Grab 約 10～15 分鐘"],
+    ["NAGASHOES","🚶 步行約 5～8 分鐘"],
+    ["ELYN","🚶 步行約 5～8 分鐘"],
+    ["Pizza 4P’s","🚕 Grab 約 12～15 分鐘"],
+    ["第一郡自由活動","🚕 Grab 約 8～12 分鐘"],
+    ["Bùi Viện Walking Street","🚕 Grab 約 10～15 分鐘"],
+    ["23/9 公園","🚶 步行約 3～5 分鐘"],
+    ["從 ZENITY 出發","🚕 Grab 約 10～15 分鐘"],
+    ["NaH Makeup","🚕 Grab 約 10～15 分鐘"],
+    ["好吃法國麵包","🚶 步行／Grab 依現場距離"],
+    ["粉紅教堂","🚕 Grab 約 15～20 分鐘"],
+    ["Café Linh","🚕 Grab 約 5～8 分鐘"],
+    ["西貢中央郵局","🚕 Grab 約 8～10 分鐘"],
+    ["濱城市場","🚕 Grab 約 8～10 分鐘"],
+    ["The New Playground","🚕 Grab 約 5～8 分鐘"],
+    ["The Cafe Apartment","🚶 步行約 8～12 分鐘"],
+        ["Chez Mimosa","🚕 Grab 約 5～10 分鐘"],
+    ["回 ZENITY","🚕 Grab 約 5～10 分鐘"],
+    ["大賣場採買","🚕 Grab 約 25～35 分鐘"],
+    ["前往機場","🚕 Grab 約 5～10 分鐘"]
+  ];
+  for(const [k,v] of rules){ if(n.includes(k)) return v; }
+  return "";
+}
+
+function renderNoteHTML(name, note){
+  const txt = noteForDisplay(name, note);
+  const lines = String(txt||"").split(/\n+/).filter(Boolean);
+  return lines.map(line=>{
+    const clean = esc(line);
+    if(/^(🚕|🚶)/.test(line.trim())){
+      return `<span class="transport-badge">${clean}</span>`;
+    }
+    return `<div>${clean}</div>`;
+  }).join("");
+}
+
+function noteForDisplay(name, note){
+  let base = shortNote(name, note);
+  const t = defaultTransportNote(name);
+  if(t && !String(base).includes("Grab") && !String(base).includes("步行")){
+    base = base ? base + "\n" + t : t;
+  }
+  return base;
+}
+
+function shortNote(name, note){
+  // Preserve edited notes and opening hours rather than replacing them with an address.
+  return String(note||"");
+}
+function legacyShortNote(name, note){
+  const n = String(name||"");
+  const map = [
+    ["ZENITY","📍608 Võ Văn Kiệt"],
+    ["Little Beauty","📍176 Lê Lai｜美甲＋美睫"],
+    ["NAGASHOES","📍26 Nguyễn Trãi"],
+    ["ELYN","📍57 Nguyễn Trãi"],
+    ["Pizza 4P’s","📍8/15 Lê Thánh Tôn"],
+    ["NaH Makeup","📍69 Tân Vĩnh｜妝髮約 2～2.5 小時"],
+    ["The Cafe Apartment","📍42 Nguyễn Huệ｜逛店＋喝咖啡"],
+    ["23/9 公園","📍Công viên 23 tháng 9｜Grab 集合／上下車點"]
+  ];
+  for(const [k,v] of map){ if(n.includes(k)) return v; }
+  return String(note||"");
+}
+function nextFixedIndex(i){
+  const day = dayKeyForIndex(i);
+  for(let k=i+1;k<rows.length;k++){
+    if(dayKeyForIndex(k)!==day) break;
+    if(rows[k][6] && parseStart(rows[k][1])!==null) return k;
+  }
+  return -1;
+}
+function suggestedDepartForRow(i){
+  if(!rows[i][6]) return "";
+  const start = parseStart(rows[i][1]);
+  if(start===null) return "";
+  const day = dayKeyForIndex(i);
+  if(i===0 || dayKeyForIndex(i-1)!==day) return "";
+  const travel = transportMinutes(rows[i][2]);
+  if(!travel) return "";
+  // 10-minute safety buffer
+  return fmt(start - travel - 10);
+}
+function latestLeaveForRow(i){
+  const j = nextFixedIndex(i);
+  if(j<0) return "";
+  const start = parseStart(rows[j][1]);
+  const travel = transportMinutes(rows[j][2]);
+  if(start===null || !travel) return "";
+  // 10-minute safety buffer
+  const t = start - travel - 10;
+  const ownStart = parseStart(rows[i][1]);
+  if(ownStart!==null && t <= ownStart) return "";
+  return fmt(t);
+}
+
+function dayClassForIndex(i){
+  let current = "";
+  for(let k=i;k>=0;k--){
+    const d = String(rows[k][0]||"");
+    if(d==="住宿") return "lodging";
+    if(d.includes("10/9") || d.includes("DAY 1")) return "day1";
+    if(d.includes("10/10") || d.includes("DAY 2")) return "day2";
+    if(d.includes("10/11") || d.includes("DAY 3")) return "day3";
+  }
+  return current;
+}
+function weatherLabel(r){
+  const d = String(r[0]||"");
+  if(d.includes("10/9") || d.includes("DAY 1")) return "🛬 抵達日｜固定預約為主";
+  if(d.includes("10/10") || d.includes("DAY 2")) return "⛈️ 天候備案｜戶外拍照優先排上午";
+  if(d.includes("10/11") || d.includes("DAY 3")) return "✈️ 回程日｜預留塞車＋提早到機場";
+  return "";
+}
+function render() {
+  document.body.classList.toggle("is-editing", editing);
+  tbody.innerHTML = "";
+  rows.forEach((r,i)=>{
+    if(r[0] && String(r[0]).includes("DAY")){
+      const dh = document.createElement("tr");
+      const dcHead = dayClassForIndex(i);
+      if(dcHead) dh.classList.add(dcHead);
+      dh.classList.add("day-header");
+      const dtd = document.createElement("td");
+      dtd.colSpan = 7;
+      dtd.textContent = r[0];
+      dh.appendChild(dtd);
+      tbody.appendChild(dh);
+    }
+
+    const tr = document.createElement("tr");
+    tr.dataset.index = i;
+    if(r[0] && String(r[0]).includes("DAY") && !String(r[2]||"").trim()){
+      tr.classList.add("day-data-anchor");
+    }
+    const dc = dayClassForIndex(i);
+    if(dc) tr.classList.add(dc);
+    if(r[6]) tr.classList.add("locked-time");
+    if(String(r[2]||"").includes("長榮 BR391") || String(r[2]||"").includes("長榮 BR396")){
+      tr.classList.add("flight-row");
+    }
+
+    const anchor = isDayAnchor(i);
+    tr.draggable = !anchor && !editing;
+
+    tr.addEventListener("dragstart", e=>{
+      if(anchor){ e.preventDefault(); return; }
+      dragIndex=i;
+      tr.dataset.dragDay = dayKeyForIndex(i);
+      tr.classList.add("dragging");
+      e.dataTransfer.effectAllowed="move";
+    });
+    tr.addEventListener("dragend", ()=>{
+      dragIndex=null;
+      tr.classList.remove("dragging");
+      document.querySelectorAll("tr").forEach(x=>x.classList.remove("drop-target","drag-denied"));
+    });
+    tr.addEventListener("dragover", e=>{
+      if(dragIndex===null) return;
+      const sameDay = dayKeyForIndex(i) === dayKeyForIndex(dragIndex);
+      const validTarget = sameDay && !isDayAnchor(i);
+      if(validTarget){
+        e.preventDefault();
+        tr.classList.add("drop-target");
+      }else{
+        tr.classList.add("drag-denied");
+      }
+    });
+    tr.addEventListener("dragleave", ()=>tr.classList.remove("drop-target","drag-denied"));
+    tr.addEventListener("drop", e=>{
+      e.preventDefault();
+      tr.classList.remove("drop-target","drag-denied");
+      if(dragIndex===null || dragIndex===i) return;
+      const sourceDay = dayKeyForIndex(dragIndex);
+      const targetDay = dayKeyForIndex(i);
+      if(sourceDay!==targetDay || isDayAnchor(i)){
+        statusEl.textContent="⚠️ 行程只能在同一天內拖拉排序";
+        setTimeout(()=>save(),1500);
+        return;
+      }
+      const moved = rows.splice(dragIndex,1)[0];
+      rows.splice(i,0,moved);
+      dragIndex=null;
+      recalcTimes();
+    });
+
+    const dragTd=document.createElement("td");
+    dragTd.className="drag";
+    dragTd.textContent = anchor ? "•" : "☰";
+    dragTd.title = anchor ? "日期起點不可拖動" : "拖拉調整順序";
+    if(!anchor){
+      dragTd.tabIndex = 0;
+      dragTd.setAttribute("role", "button");
+      dragTd.setAttribute("aria-label", "拖拉調整順序，方向鍵上下移動");
+      dragTd.addEventListener("keydown", event => {
+        if(event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        event.preventDefault();
+        moveRow(i, i + (event.key === "ArrowUp" ? -1 : 1));
+      });
+      dragTd.addEventListener("pointerdown", event => {
+        if(!editing || event.button !== 0) return;
+        event.preventDefault();
+        dragTd.setPointerCapture(event.pointerId);
+        let target = i;
+        tr.classList.add("dragging");
+        const onMove = move => {
+          const hit = document.elementFromPoint(move.clientX, move.clientY)?.closest("tr[data-index]");
+          document.querySelectorAll(".drop-target").forEach(el => el.classList.remove("drop-target"));
+          target = hit ? Number(hit.dataset.index) : i;
+          if(!rows[target] || isDayAnchor(target) || dayKeyForIndex(target) !== dayKeyForIndex(i)) target = i;
+          if(target !== i) hit.classList.add("drop-target");
+        };
+        const finish = up => {
+          dragTd.removeEventListener("pointermove", onMove);
+          dragTd.removeEventListener("pointerup", finish);
+          dragTd.removeEventListener("pointercancel", finish);
+          tr.classList.remove("dragging");
+          document.querySelectorAll(".drop-target").forEach(el => el.classList.remove("drop-target"));
+          if(up.type === "pointerup") moveRow(i, target);
+        };
+        dragTd.addEventListener("pointermove", onMove);
+        dragTd.addEventListener("pointerup", finish);
+        dragTd.addEventListener("pointercancel", finish);
+      });
+    }
+    tr.appendChild(dragTd);
+
+    // Date
+    const dateTd = document.createElement("td");
+    if(editing){
+      dateTd.contentEditable = "true";
+      dateTd.innerText = r[0] || "";
+      dateTd.addEventListener("input", e=>{rows[i][0]=e.target.innerText; save();});
+    } else {
+      const dateText = document.createElement("div");
+      dateText.className = "day-label";
+      dateText.textContent = (r[0] && String(r[0]).includes("DAY")) ? "" : (r[0] || "");
+      dateTd.appendChild(dateText);
+    }
+    tr.appendChild(dateTd);
+
+    // Time
+    const timeTd = document.createElement("td");
+    if(editing){
+      timeTd.contentEditable = "true";
+      timeTd.innerText = r[1] || "";
+      timeTd.addEventListener("input", e=>{rows[i][1]=e.target.innerText; save();});
+    }else{
+      timeTd.textContent = r[1] || "";
+      if(String(r[3]||"").includes("已預約")){
+        const reserved=document.createElement("span");
+        reserved.className="reserved-time-badge";
+        reserved.textContent="已預訂";
+        timeTd.appendChild(reserved);
+      }
+    }
+    tr.appendChild(timeTd);
+
+    // Itinerary clickable in view mode
+    const itTd = document.createElement("td");
+    if(!editing && r[4]){
+      const a=document.createElement("a");
+      a.className="it-link"; a.href=safeMapUrl(r[4]); a.target="_blank"; a.rel="noopener noreferrer";
+      a.textContent=r[2] || "";
+      itTd.appendChild(a);
+    } else {
+      itTd.innerHTML = esc(r[2]).replace(/\n/g,"<br>");
+      itTd.contentEditable = editing ? "true" : "false";
+      itTd.addEventListener("input", e=>{rows[i][2]=e.target.innerText; save();});
+    }
+
+    tr.appendChild(itTd);
+
+    // Notes, shortened in view mode
+    const noteTd = document.createElement("td");
+    if(editing){
+      if(!String(r[3]||'').includes('Grab') && !String(r[3]||'').includes('步行')){
+        const t = defaultTransportNote(r[2]);
+        if(t) r[3] = (r[3] ? r[3] + '\n' : '') + t;
+      }
+      noteTd.innerHTML = esc(r[3]).replace(/\n/g,"<br>");
+      noteTd.contentEditable = "true";
+      noteTd.addEventListener("input", e=>{rows[i][3]=e.target.innerText; save();});
+    }else{
+      noteTd.className="short-address";
+      noteTd.innerHTML = renderNoteHTML(r[2], r[3]);
+    }
+    tr.appendChild(noteTd);
+
+    // Settings only in edit mode
+    const setTd = document.createElement("td");
+    if(editing){
+      const inp = document.createElement("input");
+      inp.className = "edit-input"; inp.value = r[4] || ""; inp.placeholder = "Google Maps 網址";
+      inp.type="url"; inp.setAttribute("aria-label", "Google Maps 網址");
+      inp.addEventListener("input", e=>{rows[i][4]=e.target.value.trim(); save();});
+      setTd.appendChild(inp);
+
+      const dur = document.createElement("input");
+      dur.className = "edit-input"; dur.style.marginTop="6px";
+      dur.type="number"; dur.min="0"; dur.step="5"; dur.value=r[5]||0;
+      dur.placeholder="停留分鐘";
+      dur.setAttribute("aria-label", "停留分鐘");
+      dur.addEventListener("input", e=>{rows[i][5]=Number(e.target.value||0); save();});
+      setTd.appendChild(dur);
+
+      const lock = document.createElement("label");
+      lock.className="small"; lock.style.display="block"; lock.style.marginTop="5px";
+      const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=!!r[6];
+      cb.onchange=e=>{rows[i][6]=e.target.checked; save(); render();};
+      lock.appendChild(cb); lock.append(" 固定時間");
+      setTd.appendChild(lock);
+    } else {
+      setTd.innerHTML = '<span class="small">—</span>';
+    }
+    tr.appendChild(setTd);
+
+    const act=document.createElement("td");
+    if(editing && !anchor){
+      const del=document.createElement("button");
+      del.className="delete-row-btn";
+      del.textContent="✕";
+      del.title="刪除此行";
+      del.setAttribute("aria-label","刪除此行");
+      del.onclick=()=>{if(confirm("確定刪除這一行嗎？")){rows.splice(i,1); save(); render();}};
+      act.appendChild(del);
+    }
+    tr.appendChild(act);
+
+    tbody.appendChild(tr);
+  });
+}
+function safeMapUrl(value){
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : "#";
+  } catch(error){ return "#"; }
+}
+function moveRow(from, to){
+  if(!rows[to] || from === to || isDayAnchor(to) || dayKeyForIndex(from) !== dayKeyForIndex(to)) return;
+  const moved = rows.splice(from, 1)[0];
+  rows.splice(to, 0, moved);
+  save(); render();
+  if(editing) tbody.querySelector(`tr[data-index="${to}"] .drag`)?.focus({preventScroll:true});
+}
+editBtn.onclick=()=>{
+  editing=!editing;
+  editBtn.textContent=editing?"✅ 完成編輯":"✏️ 開始編輯";
+  statusEl.textContent=editing?"編輯模式｜可改文字、網址、停留時間":"瀏覽模式";
+  if(!editing) save();
+  render();
+};
+document.getElementById("recalcBtn").onclick=recalcTimes;
+document.getElementById("addBtn").onclick=()=>{
+  rows.push(["","","新行程","","",30,false]);
+  editing=true; editBtn.textContent="✅ 完成編輯"; save(); render();
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm("確定還原原始內容？")){rows=copyOriginal(); save(); render();}
+};
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify(rows,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="胡志明3天2夜行程備份.json"; a.click(); URL.revokeObjectURL(a.href);
+};
+render();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', {scope:'./', updateViaCache:'none'})
+      .catch(error => console.warn('Service worker registration failed', error));
+  });
+}
+</script>
+
+</body>
+</html>
