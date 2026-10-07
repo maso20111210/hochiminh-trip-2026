@@ -58,12 +58,28 @@ refresh();
 setInterval(refresh,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) refresh();});
 
-async function publish(){
+async function googleLogin(){
+  const provider=new GoogleAuthProvider(); provider.setCustomParameters({prompt:'select_account'});
+  await signInWithPopup(auth,provider);
+}
+function loginError(error){
+  message(error.code==='auth/popup-blocked'?'登入視窗被阻擋｜請用 Chrome／Safari 開啟，再按同步存檔':'登入未完成｜草稿仍保留，請再按同步存檔');
+}
+async function publish({interactive=false}={}){
   if(busy) return;
   if(!navigator.onLine){message('離線草稿已儲存｜連線後請同步存檔');return;}
+  if(!bridge.getMeta().dirty){await refresh();return;}
+  if(!canPublish()){
+    if(!interactive){message('本機草稿已儲存｜按「同步存檔」登入並發布');return;}
+    busy=true;sync.disabled=true;message('請完成 Google 登入以發布草稿');
+    try{await googleLogin();}
+    catch(error){loginError(error);return;}
+    finally{busy=false;sync.disabled=false;}
+    if(!canPublish()){message('帳號驗證未完成｜草稿仍保留');return;}
+  }
+  if(!ready) await refresh();
   if(!ready){message('正在載入共享行程，請稍後再同步');return;}
   if(!bridge.getMeta().dirty){message('已是最新共享版本');return;}
-  if(!canPublish()){message('本機草稿已儲存｜請先登入 Google 帳號再同步');return;}
   const sent=bridge.getRows();
   if(!validRows(sent)){message('資料格式錯誤｜請先匯出備份');return;}
   const base=bridge.getMeta().version;
@@ -81,19 +97,22 @@ async function publish(){
     sharedButton.hidden=true;
     message(bridge.getMeta().dirty?'共享版本已發布｜另有新草稿尚未同步':'已同步到共享行程');
   }catch(error){
+    if(error.message==='version-conflict') await refresh();
     sharedButton.hidden=!latest;
     message(error.message==='version-conflict'?'共享行程有新版｜請匯出草稿或載入共享版本':'同步失敗｜本機草稿保留，請重試');
   }finally{busy=false;sync.disabled=false;}
 }
 window.tripCloud={publish};
-sync.onclick=publish;
+sync.onclick=()=>publish({interactive:true});
 login.onclick=async()=>{
   try{
     if(auth.currentUser){await signOut(auth);return;}
-    const provider=new GoogleAuthProvider(); provider.setCustomParameters({prompt:'select_account'});
-    await signInWithPopup(auth,provider);
-    if(canPublish()) message('已登入｜可同步存檔');
-  }catch(error){message('登入未完成｜本機草稿保留，請重試 Google 登入');}
+    await googleLogin();
+    if(canPublish()){
+      if(bridge.getMeta().dirty) await publish();
+      else message('已登入｜可同步存檔');
+    }
+  }catch(error){loginError(error);}
 };
 sharedButton.onclick=()=>{
   if(!latest||busy) return;

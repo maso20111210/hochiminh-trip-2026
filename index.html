@@ -545,6 +545,7 @@ function loadRows(){
   return copyOriginal();
 }
 let rows = loadRows();
+let savedRowsJSON = JSON.stringify(rows);
 let editing = false;
 let dragIndex = null;
 const tbody = document.getElementById("tbody");
@@ -563,7 +564,8 @@ window.tripBridge = {
   apply(shared, version){
     rows=JSON.parse(JSON.stringify(shared));
     syncMeta={version,dirty:false};
-    localStorage.setItem(KEY,JSON.stringify(rows)); persistSync(); render();
+    savedRowsJSON=JSON.stringify(rows);
+    localStorage.setItem(KEY,savedRowsJSON); persistSync(); render();
   },
   acknowledge(sent,version){
     syncMeta.version=version;
@@ -578,10 +580,13 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 }
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(rows)); }
+  const serialized=JSON.stringify(rows);
+  const changed=serialized!==savedRowsJSON;
+  try { localStorage.setItem(KEY, serialized); }
   catch(error){ statusEl.textContent = "無法儲存，請匯出備份"; return; }
-  syncMeta.dirty=true; persistSync();
-  statusEl.textContent = "本機草稿已儲存｜尚未同步";
+  if(changed) syncMeta.dirty=true;
+  savedRowsJSON=serialized; persistSync();
+  statusEl.textContent = syncMeta.dirty ? "本機草稿已儲存｜尚未同步" : "內容未變更";
 }
 function parseStart(t) {
   const m = String(t||"").match(/(\d{1,2}):(\d{2})/);
