@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "esbuild cloud-sync.source.js --bundle --minify --format=iife --target=es2020 --outfile=cloud-sync.js"
+  },
+  "dependencies": {
+    "firebase": "12.19.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

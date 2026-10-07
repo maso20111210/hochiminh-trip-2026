@@ -1,0 +1,107 @@
+import {initializeApp} from 'firebase/app';
+import {getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut} from 'firebase/auth';
+import {getFirestore, doc, getDoc, runTransaction, serverTimestamp} from 'firebase/firestore/lite';
+
+const config = {
+  apiKey:'AIzaSyBEPHSu15705nxMf1aeagfcJW9Ctzgd_Ng',
+  authDomain:'hochiminh-trip-2026-mei.firebaseapp.com',
+  projectId:'hochiminh-trip-2026-mei',
+  appId:'1:1000066384534:web:e6eabef840a57e30f978b7'
+};
+const app=initializeApp(config);
+const auth=getAuth(app);
+const db=getFirestore(app);
+const reference=doc(db,'itineraries','hochiminh-trip-2026');
+const bridge=window.tripBridge;
+const login=document.getElementById('loginBtn');
+const sync=document.getElementById('syncBtn');
+const sharedButton=document.getElementById('sharedBtn');
+let latest=null, ready=false, busy=false;
+const validRows=value=>Array.isArray(value)&&value.length>0&&value.length<=500&&value.every(r=>Array.isArray(r)&&r.length===7&&r.slice(0,5).every(v=>typeof v==='string')&&typeof r[5]==='number'&&Number.isFinite(r[5])&&typeof r[6]==='boolean');
+const canPublish=()=>auth.currentUser?.emailVerified===true;
+const message=text=>bridge.status(text);
+
+onAuthStateChanged(auth,user=>{
+  login.textContent=user?'登出':'Google 登入';
+  if(user&&!canPublish()) message('請驗證 Google 帳號｜本機草稿仍保留');
+});
+
+async function refresh(){
+  if(!navigator.onLine||document.hidden) return;
+  try {
+  const snapshot=await getDoc(reference);
+  ready=true;
+  if(!snapshot.exists()){message('共享行程尚未建立');return;}
+  try{
+    const data=snapshot.data();
+    const parsed=JSON.parse(data.rowsJson);
+    if(!validRows(parsed)||!Number.isSafeInteger(data.version)) throw new Error('invalid');
+    latest={rows:parsed,version:data.version};
+    const meta=bridge.getMeta();
+    // Old localStorage edits are drafts, not permission to overwrite the shared version.
+    if(meta.version===null) bridge.setBase(data.version);
+    if(busy) return;
+    if(!meta.dirty&&!bridge.isEditing()){
+      bridge.apply(parsed,data.version); sharedButton.hidden=true;
+      message('共享行程已更新');
+    }else if(JSON.stringify(bridge.getRows())===data.rowsJson){
+      bridge.acknowledge(parsed,data.version); sharedButton.hidden=true;
+      message('已同步到共享行程');
+    }else{
+      sharedButton.hidden=false;
+      message(meta.version!==null&&meta.version!==data.version?'共享行程有新版｜本機草稿保留':'本機草稿已儲存｜尚未同步');
+    }
+  }catch(error){message('共享資料格式錯誤｜本機資料保留');}
+  }catch(error){message('無法連線共享行程｜本機草稿仍保留');}
+}
+refresh();
+setInterval(refresh,30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden) refresh();});
+
+async function publish(){
+  if(busy) return;
+  if(!navigator.onLine){message('離線草稿已儲存｜連線後請同步存檔');return;}
+  if(!ready){message('正在載入共享行程，請稍後再同步');return;}
+  if(!bridge.getMeta().dirty){message('已是最新共享版本');return;}
+  if(!canPublish()){message('本機草稿已儲存｜請先登入 Google 帳號再同步');return;}
+  const sent=bridge.getRows();
+  if(!validRows(sent)){message('資料格式錯誤｜請先匯出備份');return;}
+  const base=bridge.getMeta().version;
+  busy=true; sync.disabled=true; message('正在同步…');
+  try{
+    const version=await runTransaction(db,async transaction=>{
+      const snapshot=await transaction.get(reference);
+      const current=snapshot.exists()?snapshot.data().version:0;
+      if(current!==(base??0)) throw new Error('version-conflict');
+      const next=current+1;
+      transaction.set(reference,{rowsJson:JSON.stringify(sent),version:next,updatedAt:serverTimestamp()});
+      return next;
+    });
+    bridge.acknowledge(sent,version);
+    sharedButton.hidden=true;
+    message(bridge.getMeta().dirty?'共享版本已發布｜另有新草稿尚未同步':'已同步到共享行程');
+  }catch(error){
+    sharedButton.hidden=!latest;
+    message(error.message==='version-conflict'?'共享行程有新版｜請匯出草稿或載入共享版本':'同步失敗｜本機草稿保留，請重試');
+  }finally{busy=false;sync.disabled=false;}
+}
+window.tripCloud={publish};
+sync.onclick=publish;
+login.onclick=async()=>{
+  try{
+    if(auth.currentUser){await signOut(auth);return;}
+    const provider=new GoogleAuthProvider(); provider.setCustomParameters({prompt:'select_account'});
+    await signInWithPopup(auth,provider);
+    if(canPublish()) message('已登入｜可同步存檔');
+  }catch(error){message('登入未完成｜本機草稿保留，請重試 Google 登入');}
+};
+sharedButton.onclick=()=>{
+  if(!latest||busy) return;
+  if(bridge.getMeta().dirty&&!confirm('將載入共享版本；本機草稿會另存為備份。確定？')) return;
+  try{
+    localStorage.setItem('hcm_itinerary_supermarkets_v1_draft_backup',JSON.stringify(bridge.getRows()));
+    bridge.apply(latest.rows,latest.version); sharedButton.hidden=true; message('已載入共享版本');
+  }catch(error){message('無法儲存草稿備份｜請先匯出備份');}
+};
+window.addEventListener('offline',()=>message('離線模式｜本機草稿保留'));
+window.addEventListener('online',refresh);

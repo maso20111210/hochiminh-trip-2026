@@ -474,6 +474,9 @@ body:not(.is-editing) tr td:nth-child(7){display:none !important}
     <button id="addBtn">➕ 新增一列</button>
     <button id="resetBtn">↩️ 還原原始內容</button>
     <button id="exportBtn">💾 匯出備份</button>
+    <button id="loginBtn" title="登入 Google 帳號以發布共享修改">Google 登入</button>
+    <button id="syncBtn" title="將本機草稿發布到共享行程">☁ 同步存檔</button>
+    <button id="sharedBtn" hidden title="保留草稿備份並載入共享版本">載入共享版本</button>
     <span id="status" class="status">目前為瀏覽模式</span>
   </div>
 
@@ -502,6 +505,29 @@ let dragIndex = null;
 const tbody = document.getElementById("tbody");
 const statusEl = document.getElementById("status");
 const editBtn = document.getElementById("editBtn");
+const SYNC_KEY = KEY + '_cloud';
+let syncMeta = {version:null, dirty:JSON.stringify(rows)!==JSON.stringify(original)};
+try { syncMeta = {...syncMeta, ...JSON.parse(localStorage.getItem(SYNC_KEY)||'{}')}; } catch(error) {}
+function persistSync(){
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncMeta)); } catch(error) {}
+}
+window.tripBridge = {
+  getRows:()=>JSON.parse(JSON.stringify(rows)),
+  getMeta:()=>({...syncMeta}),
+  isEditing:()=>editing,
+  apply(shared, version){
+    rows=JSON.parse(JSON.stringify(shared));
+    syncMeta={version,dirty:false};
+    localStorage.setItem(KEY,JSON.stringify(rows)); persistSync(); render();
+  },
+  acknowledge(sent,version){
+    syncMeta.version=version;
+    syncMeta.dirty=JSON.stringify(rows)!==JSON.stringify(sent);
+    persistSync();
+  },
+  setBase(version){syncMeta.version=version; persistSync();},
+  status(text){statusEl.textContent=text;}
+};
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -509,7 +535,8 @@ function esc(s) {
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(rows)); }
   catch(error){ statusEl.textContent = "無法儲存，請匯出備份"; return; }
-  statusEl.textContent = editing ? "編輯模式｜已自動儲存" : "瀏覽模式｜內容已儲存";
+  syncMeta.dirty=true; persistSync();
+  statusEl.textContent = "本機草稿已儲存｜尚未同步";
 }
 function parseStart(t) {
   const m = String(t||"").match(/(\d{1,2}):(\d{2})/);
@@ -901,10 +928,6 @@ function render() {
     // Notes, shortened in view mode
     const noteTd = document.createElement("td");
     if(editing){
-      if(!String(r[3]||'').includes('Grab') && !String(r[3]||'').includes('步行')){
-        const t = defaultTransportNote(r[2]);
-        if(t) r[3] = (r[3] ? r[3] + '\n' : '') + t;
-      }
       noteTd.innerHTML = esc(r[3]).replace(/\n/g,"<br>");
       noteTd.contentEditable = "true";
       noteTd.addEventListener("input", e=>{rows[i][3]=e.target.innerText; save();});
@@ -976,6 +999,7 @@ editBtn.onclick=()=>{
   statusEl.textContent=editing?"編輯模式｜可改文字、網址、停留時間":"瀏覽模式";
   if(!editing) save();
   render();
+  if(!editing) window.tripCloud?.publish();
 };
 document.getElementById("recalcBtn").onclick=recalcTimes;
 document.getElementById("addBtn").onclick=()=>{
@@ -992,6 +1016,8 @@ document.getElementById("exportBtn").onclick=()=>{
 };
 render();
 </script>
+
+<script src="./cloud-sync.js" defer></script>
 
 <script>
 if ('serviceWorker' in navigator) {

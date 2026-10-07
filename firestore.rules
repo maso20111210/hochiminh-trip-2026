@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /itineraries/hochiminh-trip-2026 {
+      allow get: if true;
+      allow create, update: if request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['rowsJson', 'version', 'updatedAt'])
+        && request.resource.data.rowsJson is string
+        && request.resource.data.rowsJson.size() < 300000
+        && request.resource.data.version is int
+        && request.resource.data.version == (resource == null ? 1 : resource.data.version + 1)
+        && request.resource.data.updatedAt == request.time;
+    }
+  }
+}
