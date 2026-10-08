@@ -17,6 +17,7 @@ const login=document.getElementById('loginBtn');
 const sync=document.getElementById('syncBtn');
 const sharedButton=document.getElementById('sharedBtn');
 let latest=null, ready=false, busy=false;
+let autoTimer=null, autoRequested=false;
 const validRows=value=>Array.isArray(value)&&value.length>0&&value.length<=500&&value.every(r=>Array.isArray(r)&&r.length===7&&r.slice(0,5).every(v=>typeof v==='string')&&typeof r[5]==='number'&&Number.isFinite(r[5])&&typeof r[6]==='boolean');
 const canPublish=()=>auth.currentUser?.emailVerified===true;
 const message=text=>bridge.status(text);
@@ -55,7 +56,7 @@ async function refresh(){
   }catch(error){message('無法連線共享行程｜本機草稿仍保留');}
 }
 refresh();
-setInterval(refresh,30000);
+setInterval(refresh,10000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) refresh();});
 
 async function googleLogin(){
@@ -67,7 +68,7 @@ function loginError(error){
 }
 async function publish({interactive=false}={}){
   if(busy) return;
-  if(!navigator.onLine){message('離線草稿已儲存｜連線後請同步存檔');return;}
+  if(!navigator.onLine){autoRequested=true;message('離線草稿已儲存｜登入後恢復連線會自動同步');return;}
   if(!bridge.getMeta().dirty){await refresh();return;}
   if(!canPublish()){
     if(!interactive){message('本機草稿已儲存｜按「同步存檔」登入並發布');return;}
@@ -94,14 +95,27 @@ async function publish({interactive=false}={}){
       return next;
     });
     bridge.acknowledge(sent,version);
+    autoRequested=bridge.getMeta().dirty;
     sharedButton.hidden=true;
     message(bridge.getMeta().dirty?'共享版本已發布｜另有新草稿尚未同步':'已同步到共享行程');
   }catch(error){
     if(error.message==='version-conflict') await refresh();
     sharedButton.hidden=!latest;
+    autoRequested=false;
     message(error.message==='version-conflict'?'共享行程有新版｜請匯出草稿或載入共享版本':'同步失敗｜本機草稿保留，請重試');
   }finally{busy=false;sync.disabled=false;}
+  if(autoRequested) scheduleAutoPublish();
 }
+function scheduleAutoPublish(){
+  clearTimeout(autoTimer);
+  if(!autoRequested||!canPublish()||!navigator.onLine) return;
+  message('本機草稿已儲存｜即將自動同步');
+  autoTimer=setTimeout(()=>{if(!busy) publish();else scheduleAutoPublish();},2000);
+}
+window.addEventListener('tripdraftchange',()=>{
+  autoRequested=true;
+  scheduleAutoPublish();
+});
 window.tripCloud={publish};
 sync.onclick=()=>publish({interactive:true});
 login.onclick=async()=>{
@@ -119,8 +133,12 @@ sharedButton.onclick=()=>{
   if(bridge.getMeta().dirty&&!confirm('將載入共享版本；本機草稿會另存為備份。確定？')) return;
   try{
     localStorage.setItem('hcm_itinerary_supermarkets_v1_draft_backup',JSON.stringify(bridge.getRows()));
+    autoRequested=false;clearTimeout(autoTimer);
     bridge.apply(latest.rows,latest.version); sharedButton.hidden=true; message('已載入共享版本');
   }catch(error){message('無法儲存草稿備份｜請先匯出備份');}
 };
 window.addEventListener('offline',()=>message('離線模式｜本機草稿保留'));
-window.addEventListener('online',refresh);
+window.addEventListener('online',async()=>{
+  await refresh();
+  if(autoRequested) scheduleAutoPublish();
+});

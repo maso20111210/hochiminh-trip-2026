@@ -587,6 +587,7 @@ function save() {
   if(changed) syncMeta.dirty=true;
   savedRowsJSON=serialized; persistSync();
   statusEl.textContent = syncMeta.dirty ? "本機草稿已儲存｜尚未同步" : "內容未變更";
+  if(changed) window.dispatchEvent(new Event('tripdraftchange'));
 }
 function parseStart(t) {
   const m = String(t||"").match(/(\d{1,2}):(\d{2})/);
@@ -1061,7 +1062,7 @@ editBtn.onclick=()=>{
   statusEl.textContent=editing?"編輯模式｜可改文字、網址、停留時間":"瀏覽模式";
   if(!editing) save();
   render();
-  if(!editing) window.tripCloud?.publish();
+  if(!editing) window.tripCloud?.publish({interactive:true});
 };
 document.getElementById("recalcBtn").onclick=recalcTimes;
 document.getElementById("addBtn").onclick=()=>{
