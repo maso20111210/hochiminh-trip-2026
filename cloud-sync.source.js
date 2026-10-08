@@ -16,6 +16,14 @@ const bridge=window.tripBridge;
 const login=document.getElementById('loginBtn');
 const sync=document.getElementById('syncBtn');
 const sharedButton=document.getElementById('sharedBtn');
+const recoverButton=document.getElementById('recoverBtn');
+const backupKey='hcm_itinerary_supermarkets_v1_draft_backup';
+let backedUp=false;
+recoverButton.hidden=!localStorage.getItem(backupKey);
+function backupDraft(){
+  localStorage.setItem(backupKey,JSON.stringify(bridge.getRows()));
+  recoverButton.hidden=false;
+}
 let latest=null, ready=false, busy=false;
 let autoTimer=null, autoRequested=false;
 const validRows=value=>Array.isArray(value)&&value.length>0&&value.length<=500&&value.every(r=>Array.isArray(r)&&r.length===7&&r.slice(0,5).every(v=>typeof v==='string')&&typeof r[5]==='number'&&Number.isFinite(r[5])&&typeof r[6]==='boolean');
@@ -37,16 +45,21 @@ async function refresh(){
     const data=snapshot.data();
     const parsed=JSON.parse(data.rowsJson);
     if(!validRows(parsed)||!Number.isSafeInteger(data.version)) throw new Error('invalid');
+    if(data.version<(bridge.getMeta().version??0)||data.version<(latest?.version??0)) return;
     latest={rows:parsed,version:data.version};
     const meta=bridge.getMeta();
     // Old localStorage edits are drafts, not permission to overwrite the shared version.
     if(meta.version===null) bridge.setBase(data.version);
     if(busy) return;
-    if(!meta.dirty&&!bridge.isEditing()){
+    if(!bridge.isEditing()&&!autoRequested){
+      if(meta.dirty&&JSON.stringify(bridge.getRows())!==data.rowsJson){
+        backupDraft(); backedUp=true;
+      }
       bridge.apply(parsed,data.version); sharedButton.hidden=true;
-      message('共享行程已更新');
+      message(`共享行程已更新｜版本 ${data.version}${backedUp?'｜舊草稿已備份，可取回':''}`);
     }else if(JSON.stringify(bridge.getRows())===data.rowsJson){
       bridge.acknowledge(parsed,data.version); sharedButton.hidden=true;
+      autoRequested=false;
       message('已同步到共享行程');
     }else{
       sharedButton.hidden=false;
@@ -132,12 +145,28 @@ sharedButton.onclick=()=>{
   if(!latest||busy) return;
   if(bridge.getMeta().dirty&&!confirm('將載入共享版本；本機草稿會另存為備份。確定？')) return;
   try{
-    localStorage.setItem('hcm_itinerary_supermarkets_v1_draft_backup',JSON.stringify(bridge.getRows()));
+    if(bridge.getMeta().dirty) backupDraft();
     autoRequested=false;clearTimeout(autoTimer);
     bridge.apply(latest.rows,latest.version); sharedButton.hidden=true; message('已載入共享版本');
   }catch(error){message('無法儲存草稿備份｜請先匯出備份');}
 };
 window.addEventListener('offline',()=>message('離線模式｜本機草稿保留'));
+recoverButton.onclick=async()=>{
+  if(busy||!navigator.onLine){message('請連網後取回草稿');return;}
+  await refresh();
+  if(!latest) return;
+  if(!confirm('取回本機草稿進行編輯；若之後同步，將以整份草稿取代目前共享行程。請先確認並保留朋友的新修改。確定取回？')) return;
+  try{
+    const draft=JSON.parse(localStorage.getItem(backupKey));
+    if(!validRows(draft)) throw new Error('invalid');
+    const current=bridge.getRows();
+    clearTimeout(autoTimer);
+    bridge.restoreDraft(draft,latest.version);
+    localStorage.setItem(backupKey,JSON.stringify(current));
+    autoRequested=false; backedUp=false;
+    message('已取回本機草稿｜尚未發布，請確認內容後同步');
+  }catch(error){message('無法取回草稿｜備份仍保留');}
+};
 window.addEventListener('online',async()=>{
   await refresh();
   if(autoRequested) scheduleAutoPublish();

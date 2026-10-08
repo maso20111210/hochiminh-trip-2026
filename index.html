@@ -521,6 +521,7 @@ body:not(.is-editing) tr td:nth-child(7){display:none !important}
     <button id="exportBtn">💾 匯出備份</button>
     <button id="loginBtn" title="登入 Google 帳號以發布共享修改">Google 登入</button>
     <button id="syncBtn" title="將本機草稿發布到共享行程">☁ 同步存檔</button>
+    <button id="recoverBtn" hidden title="取回備份的本機修改，不會直接發布">↩ 取回本機草稿</button>
     <button id="sharedBtn" hidden title="保留草稿備份並載入共享版本">載入共享版本</button>
     <span id="status" class="status">目前為瀏覽模式</span>
   </div>
@@ -573,6 +574,13 @@ window.tripBridge = {
     persistSync();
   },
   setBase(version){syncMeta.version=version; persistSync();},
+  restoreDraft(draft,version){
+    rows=JSON.parse(JSON.stringify(draft));
+    syncMeta={version,dirty:true};
+    savedRowsJSON=JSON.stringify(rows);
+    localStorage.setItem(KEY,savedRowsJSON); persistSync();
+    editing=true; editBtn.textContent="✅ 完成編輯"; render();
+  },
   status(text){statusEl.textContent=text;}
 };
 
@@ -1080,7 +1088,7 @@ document.getElementById("exportBtn").onclick=()=>{
 render();
 </script>
 
-<script src="./cloud-sync.js" defer></script>
+<script src="./cloud-sync.js?v=20261008-v7" defer></script>
 
 <script>
 if ('serviceWorker' in navigator) {

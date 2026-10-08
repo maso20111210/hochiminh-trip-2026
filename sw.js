@@ -1,6 +1,6 @@
 const CACHE_PREFIX = 'hcm-trip-';
-const CACHE = CACHE_PREFIX + '2026-10-08-v6';
-const ASSETS = ['./', './index.html', './cloud-sync.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = CACHE_PREFIX + '2026-10-08-v7';
+const ASSETS = ['./', './index.html', './cloud-sync.js?v=20261008-v7', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 const scope = self.registration.scope;
 
 self.addEventListener('install', event => {
@@ -13,13 +13,13 @@ self.addEventListener('activate', event => {
 });
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || !event.request.url.startsWith(scope)) return;
-  if (event.request.mode === 'navigate') {
+  if (event.request.mode === 'navigate' || new URL(event.request.url).pathname.endsWith('/cloud-sync.js')) {
     event.respondWith(fetch(event.request).then(async response => {
       if (!response.ok) throw new Error('Navigation failed');
       const cache = await caches.open(CACHE);
-      await cache.put(new URL('./index.html', scope), response.clone());
+      await cache.put(event.request.mode === 'navigate' ? new URL('./index.html', scope) : event.request, response.clone());
       return response;
-    }).catch(() => caches.match(new URL('./index.html', scope))));
+    }).catch(() => caches.match(event.request.mode === 'navigate' ? new URL('./index.html', scope) : event.request)));
     return;
   }
   event.respondWith(caches.open(CACHE).then(async cache => {
