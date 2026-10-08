@@ -20,6 +20,8 @@ body{margin:0;overflow-x:hidden;font-family:-apple-system,BlinkMacSystemFont,"Se
 .hero{background:linear-gradient(135deg,#dceeff,#eef6ff);padding:22px 24px;border-radius:20px;margin-bottom:18px}
 h1{margin:0 0 8px;font-size:28px} .sub{color:var(--muted);font-size:14px;line-height:1.7}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 18px}
+.day-select{max-width:100%;min-width:0;padding:8px;font:inherit;border:1px solid #cbd5df;border-radius:6px;background:#fff;color:inherit}
+.toolbar .day-select{max-width:210px;font-size:14px}
 button{border:0;border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 button.primary{background:var(--accent);color:white}
 .status{font-size:13px;color:var(--muted);align-self:center}
@@ -516,6 +518,7 @@ body:not(.is-editing) tr td:nth-child(7){display:none !important}
   <div class="toolbar">
     <button id="editBtn" class="primary">✏️ 開始編輯</button>
     <button id="recalcBtn">🕒 重新計算時間</button>
+    <select id="addDay" class="day-select" aria-label="新增行程日期"></select>
     <button id="addBtn">➕ 新增一列</button>
     <button id="resetBtn">↩️ 還原原始內容</button>
     <button id="exportBtn">💾 匯出備份</button>
@@ -677,6 +680,32 @@ function isDayAnchor(i){
   const d = String(rows[i]?.[0]||"");
   return d==="住宿" || d.includes("DAY 1") || d.includes("DAY 2") || d.includes("DAY 3");
 }
+function daySections(){
+  return rows.flatMap((r,index)=>String(r[0]).includes('DAY')?[{index,key:dayKeyForIndex(index),label:r[0]}]:[]);
+}
+function fillDaySelect(select,selected){
+  select.replaceChildren();
+  for(const day of daySections()){
+    const option=document.createElement('option');option.value=day.key;option.textContent=day.label;
+    select.appendChild(option);
+  }
+  if([...select.options].some(option=>option.value===selected)) select.value=selected;
+}
+function canMoveTo(index){
+  return editing&&!!rows[index]&&daySections().some(day=>day.key===dayKeyForIndex(index));
+}
+function bindDropTarget(target,index){
+  target.addEventListener('dragover',event=>{
+    if(dragIndex===null||!canMoveTo(index)) return;
+    event.preventDefault();target.classList.add('drop-target');
+  });
+  target.addEventListener('dragleave',()=>target.classList.remove('drop-target'));
+  target.addEventListener('drop',event=>{
+    event.preventDefault();target.classList.remove('drop-target');
+    if(dragIndex!==null) moveRow(dragIndex,index);
+    dragIndex=null;
+  });
+}
 function transportMinutes(name){
   const n = String(name||"");
   const rules = [
@@ -831,6 +860,8 @@ function weatherLabel(r){
 }
 function render() {
   document.body.classList.toggle("is-editing", editing);
+  const addDay=document.getElementById('addDay');
+  fillDaySelect(addDay,addDay.value);
   tbody.innerHTML = "";
   rows.forEach((r,i)=>{
     if(r[0] && String(r[0]).includes("DAY")){
@@ -838,6 +869,8 @@ function render() {
       const dcHead = dayClassForIndex(i);
       if(dcHead) dh.classList.add(dcHead);
       dh.classList.add("day-header");
+      dh.dataset.dayIndex=i;
+      bindDropTarget(dh,i);
       const dtd = document.createElement("td");
       dtd.colSpan = 7;
       dtd.textContent = r[0];
@@ -858,10 +891,10 @@ function render() {
     }
 
     const anchor = isDayAnchor(i);
-    tr.draggable = !anchor && !editing;
+    tr.draggable = !anchor && editing;
 
     tr.addEventListener("dragstart", e=>{
-      if(anchor){ e.preventDefault(); return; }
+      if(anchor||!editing){ e.preventDefault(); return; }
       dragIndex=i;
       tr.dataset.dragDay = dayKeyForIndex(i);
       tr.classList.add("dragging");
@@ -872,47 +905,22 @@ function render() {
       tr.classList.remove("dragging");
       document.querySelectorAll("tr").forEach(x=>x.classList.remove("drop-target","drag-denied"));
     });
-    tr.addEventListener("dragover", e=>{
-      if(dragIndex===null) return;
-      const sameDay = dayKeyForIndex(i) === dayKeyForIndex(dragIndex);
-      const validTarget = sameDay && !isDayAnchor(i);
-      if(validTarget){
-        e.preventDefault();
-        tr.classList.add("drop-target");
-      }else{
-        tr.classList.add("drag-denied");
-      }
-    });
-    tr.addEventListener("dragleave", ()=>tr.classList.remove("drop-target","drag-denied"));
-    tr.addEventListener("drop", e=>{
-      e.preventDefault();
-      tr.classList.remove("drop-target","drag-denied");
-      if(dragIndex===null || dragIndex===i) return;
-      const sourceDay = dayKeyForIndex(dragIndex);
-      const targetDay = dayKeyForIndex(i);
-      if(sourceDay!==targetDay || isDayAnchor(i)){
-        statusEl.textContent="⚠️ 行程只能在同一天內拖拉排序";
-        setTimeout(()=>save(),1500);
-        return;
-      }
-      const moved = rows.splice(dragIndex,1)[0];
-      rows.splice(i,0,moved);
-      dragIndex=null;
-      recalcTimes();
-    });
+    bindDropTarget(tr,i);
 
     const dragTd=document.createElement("td");
     dragTd.className="drag";
-    dragTd.textContent = anchor ? "•" : "☰";
+    dragTd.textContent = anchor ? "•" : editing ? "☰" : "";
     dragTd.title = anchor ? "日期起點不可拖動" : "拖拉調整順序";
-    if(!anchor){
+    if(!anchor&&editing){
       dragTd.tabIndex = 0;
       dragTd.setAttribute("role", "button");
       dragTd.setAttribute("aria-label", "拖拉調整順序，方向鍵上下移動");
       dragTd.addEventListener("keydown", event => {
         if(event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
         event.preventDefault();
-        moveRow(i, i + (event.key === "ArrowUp" ? -1 : 1));
+        let target=i+(event.key==='ArrowUp'?-1:1);
+        if(event.key==='ArrowUp'&&isDayAnchor(target)) target--;
+        moveRow(i,target);
       });
       dragTd.addEventListener("pointerdown", event => {
         if(!editing || event.button !== 0) return;
@@ -921,10 +929,10 @@ function render() {
         let target = i;
         tr.classList.add("dragging");
         const onMove = move => {
-          const hit = document.elementFromPoint(move.clientX, move.clientY)?.closest("tr[data-index]");
+          const hit = document.elementFromPoint(move.clientX, move.clientY)?.closest("tr[data-index], tr[data-day-index]");
           document.querySelectorAll(".drop-target").forEach(el => el.classList.remove("drop-target"));
-          target = hit ? Number(hit.dataset.index) : i;
-          if(!rows[target] || isDayAnchor(target) || dayKeyForIndex(target) !== dayKeyForIndex(i)) target = i;
+          target = hit ? Number(hit.dataset.index??hit.dataset.dayIndex) : i;
+          if(!canMoveTo(target)) target = i;
           if(target !== i) hit.classList.add("drop-target");
         };
         const finish = up => {
@@ -1023,6 +1031,14 @@ function render() {
       cb.onchange=e=>{rows[i][6]=e.target.checked; save(); render();};
       lock.appendChild(cb); lock.append(" 固定時間");
       setTd.appendChild(lock);
+      if(!anchor){
+        const daySelect=document.createElement('select');
+        daySelect.className='day-select';daySelect.style.marginTop='6px';daySelect.style.width='100%';
+        daySelect.setAttribute('aria-label','行程日期');
+        fillDaySelect(daySelect,dayKeyForIndex(i));
+        daySelect.onchange=()=>moveRowToDay(i,daySelect.value);
+        setTd.appendChild(daySelect);
+      }
     } else {
       setTd.innerHTML = '<span class="small">—</span>';
     }
@@ -1058,11 +1074,24 @@ function itineraryHTML(value){
   return esc(text).replace(/\n/g,"<br>");
 }
 function moveRow(from, to){
-  if(!rows[to] || from === to || isDayAnchor(to) || dayKeyForIndex(from) !== dayKeyForIndex(to)) return;
+  if(!editing||!rows[from]||isDayAnchor(from)||!canMoveTo(to)||from===to) return;
+  const insertion=isDayAnchor(to)?to+1:from<to?to+1:to;
+  const destination=insertion-(from<insertion?1:0);
   const moved = rows.splice(from, 1)[0];
-  rows.splice(to, 0, moved);
+  rows.splice(destination, 0, moved);
   save(); render();
-  if(editing) tbody.querySelector(`tr[data-index="${to}"] .drag`)?.focus({preventScroll:true});
+  tbody.querySelector(`tr[data-index="${destination}"] .drag`)?.focus({preventScroll:true});
+}
+function dayEnd(key){
+  const days=daySections();const index=days.findIndex(day=>day.key===key);
+  return index<0?null:days[index+1]?.index??rows.length;
+}
+function moveRowToDay(from,key){
+  if(!editing||!rows[from]||isDayAnchor(from)||dayKeyForIndex(from)===key) return;
+  const end=dayEnd(key);if(end===null) return;
+  const moved=rows.splice(from,1)[0];
+  rows.splice(end-(from<end?1:0),0,moved);
+  save();render();
 }
 editBtn.onclick=()=>{
   editing=!editing;
@@ -1074,7 +1103,8 @@ editBtn.onclick=()=>{
 };
 document.getElementById("recalcBtn").onclick=recalcTimes;
 document.getElementById("addBtn").onclick=()=>{
-  rows.push(["","","新行程","","",30,false]);
+  const end=dayEnd(document.getElementById('addDay').value);if(end===null) return;
+  rows.splice(end,0,["","","新行程","","",30,false]);
   editing=true; editBtn.textContent="✅ 完成編輯"; save(); render();
 };
 document.getElementById("resetBtn").onclick=()=>{
@@ -1088,7 +1118,7 @@ document.getElementById("exportBtn").onclick=()=>{
 render();
 </script>
 
-<script src="./cloud-sync.js?v=20261008-v7" defer></script>
+<script src="./cloud-sync.js?v=20261008-v8" defer></script>
 
 <script>
 if ('serviceWorker' in navigator) {
