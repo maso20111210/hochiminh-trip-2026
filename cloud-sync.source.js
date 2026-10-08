@@ -1,5 +1,5 @@
 import {initializeApp} from 'firebase/app';
-import {getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut} from 'firebase/auth';
+import {getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged} from 'firebase/auth';
 import {getFirestore, doc, getDoc, runTransaction, serverTimestamp} from 'firebase/firestore/lite';
 
 const config = {
@@ -13,15 +13,10 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 const reference=doc(db,'itineraries','hochiminh-trip-2026');
 const bridge=window.tripBridge;
-const login=document.getElementById('loginBtn');
-const sync=document.getElementById('syncBtn');
-const sharedButton=document.getElementById('sharedBtn');
-const recoverButton=document.getElementById('recoverBtn');
+const conflictDialog=document.getElementById('conflictDialog');
 const backupKey='hcm_itinerary_supermarkets_v1_draft_backup';
-recoverButton.hidden=!localStorage.getItem(backupKey);
 function backupDraft(){
   localStorage.setItem(backupKey,JSON.stringify(bridge.getRows()));
-  recoverButton.hidden=false;
 }
 let latest=null, ready=false, busy=false;
 let autoTimer=null, autoRequested=false;
@@ -30,7 +25,6 @@ const canPublish=()=>auth.currentUser?.emailVerified===true;
 const message=text=>bridge.status(text);
 
 onAuthStateChanged(auth,user=>{
-  login.textContent=user?'登出':'Google 登入';
   if(user&&!canPublish()) message('請驗證 Google 帳號｜本機草稿仍保留');
   if(canPublish()&&latest&&bridge.getMeta().dirty&&bridge.getMeta().version===latest.version){
     autoRequested=true;scheduleAutoPublish();
@@ -54,14 +48,13 @@ async function refresh(){
     if(meta.version===null&&!meta.dirty) bridge.setBase(data.version);
     if(busy) return;
     if(!meta.dirty&&!bridge.isEditing()&&!autoRequested){
-      bridge.apply(parsed,data.version); sharedButton.hidden=true;
+      bridge.apply(parsed,data.version);
       message(`共享行程已更新｜版本 ${data.version}`);
     }else if(JSON.stringify(bridge.getRows())===data.rowsJson){
-      bridge.acknowledge(parsed,data.version); sharedButton.hidden=true;
+      bridge.acknowledge(parsed,data.version);
       autoRequested=false;
       message('已同步到共享行程');
     }else{
-      sharedButton.hidden=false;
       message(meta.version!==null&&meta.version!==data.version?'共享行程有新版｜本機草稿保留':'本機草稿已儲存｜尚未同步');
       if(meta.dirty&&meta.version===data.version&&canPublish()&&!autoRequested){
         autoRequested=true;scheduleAutoPublish();
@@ -79,27 +72,55 @@ async function googleLogin(){
   await signInWithPopup(auth,provider);
 }
 function loginError(error){
-  message(error.code==='auth/popup-blocked'?'登入視窗被阻擋｜請用 Chrome／Safari 開啟，再按同步存檔':'登入未完成｜草稿仍保留，請再按同步存檔');
+  message(error.code==='auth/popup-blocked'?'登入視窗被阻擋｜請用 Chrome／Safari 開啟，再按完成編輯':'登入未完成｜草稿仍保留，請再按完成編輯');
+}
+async function resolveConflict(){
+  const remote=latest;
+  clearTimeout(autoTimer);autoRequested=false;
+  const choice=await new Promise(resolve=>{
+    const finish=value=>{conflictDialog.close();resolve(value);};
+    document.getElementById('useCloudBtn').onclick=()=>finish('cloud');
+    document.getElementById('useDraftBtn').onclick=()=>finish('draft');
+    document.getElementById('cancelSyncBtn').onclick=()=>finish('cancel');
+    conflictDialog.oncancel=event=>{event.preventDefault();finish('cancel');};
+    conflictDialog.showModal();
+  });
+  if(choice==='cloud'){
+    backupDraft();bridge.apply(remote.rows,remote.version);
+    message(`已載入雲端版本 ${remote.version}｜舊草稿已備份`);return false;
+  }
+  if(choice==='draft'){
+    localStorage.setItem(backupKey+'_shared',JSON.stringify(remote.rows));
+    backupDraft();bridge.setBase(remote.version);return true;
+  }
+  message('尚未同步｜本機草稿保留');return false;
 }
 async function publish({interactive=false}={}){
   if(busy) return;
   if(!navigator.onLine){autoRequested=true;message('離線草稿已儲存｜登入後恢復連線會自動同步');return;}
   if(!bridge.getMeta().dirty){await refresh();return;}
+  if(interactive&&latest&&bridge.getMeta().version!==latest.version){
+    busy=true;
+    try{if(!await resolveConflict()) return;}
+    catch(error){message('無法備份｜草稿保留，尚未同步');return;}
+    finally{busy=false;}
+  }
   if(!canPublish()){
-    if(!interactive){message('本機草稿已儲存｜按「同步存檔」登入並發布');return;}
-    busy=true;sync.disabled=true;message('請完成 Google 登入以發布草稿');
+    if(!interactive){message('本機草稿已儲存｜按「完成編輯」登入並發布');return;}
+    busy=true;message('請完成 Google 登入以發布草稿');
     try{await googleLogin();}
     catch(error){loginError(error);return;}
-    finally{busy=false;sync.disabled=false;}
+    finally{busy=false;}
     if(!canPublish()){message('帳號驗證未完成｜草稿仍保留');return;}
   }
   if(!ready) await refresh();
-  if(!ready){message('正在載入共享行程，請稍後再同步');return;}
+  if(!ready){message('正在載入共享行程，請稍後再按完成編輯');return;}
   if(!bridge.getMeta().dirty){message('已是最新共享版本');return;}
   const sent=bridge.getRows();
-  if(!validRows(sent)){message('資料格式錯誤｜請先匯出備份');return;}
+  if(!validRows(sent)){message('資料格式錯誤｜草稿保留，尚未同步');return;}
   const base=bridge.getMeta().version;
-  busy=true; sync.disabled=true; message('正在同步…');
+  let conflict=false;
+  busy=true; message('正在同步…');
   try{
     const version=await runTransaction(db,async transaction=>{
       const snapshot=await transaction.get(reference);
@@ -110,15 +131,24 @@ async function publish({interactive=false}={}){
       return next;
     });
     bridge.acknowledge(sent,version);
+    latest={rows:sent,version};
     autoRequested=bridge.getMeta().dirty;
-    sharedButton.hidden=true;
     message(bridge.getMeta().dirty?'共享版本已發布｜另有新草稿尚未同步':'已同步到共享行程');
   }catch(error){
+    conflict=error.message==='version-conflict';
     if(error.message==='version-conflict') await refresh();
-    sharedButton.hidden=!latest;
     autoRequested=false;
-    message(error.message==='version-conflict'?'共享行程有新版｜請匯出草稿或載入共享版本':'同步失敗｜本機草稿保留，請重試');
-  }finally{busy=false;sync.disabled=false;}
+    message(error.message==='version-conflict'?'共享行程有新版｜草稿保留，請再按完成編輯處理':'同步失敗｜本機草稿保留，請再按完成編輯');
+  }finally{busy=false;}
+  if(conflict&&interactive&&latest){
+    busy=true;
+    let retry=false;
+    try{retry=await resolveConflict();}
+    catch(error){message('無法備份｜草稿保留，尚未同步');}
+    finally{busy=false;}
+    if(retry) await publish();
+    return;
+  }
   if(autoRequested) scheduleAutoPublish();
 }
 function scheduleAutoPublish(){
@@ -132,43 +162,7 @@ window.addEventListener('tripdraftchange',()=>{
   scheduleAutoPublish();
 });
 window.tripCloud={publish};
-sync.onclick=()=>publish({interactive:true});
-login.onclick=async()=>{
-  try{
-    if(auth.currentUser){await signOut(auth);return;}
-    await googleLogin();
-    if(canPublish()){
-      if(bridge.getMeta().dirty) await publish();
-      else message('已登入｜可同步存檔');
-    }
-  }catch(error){loginError(error);}
-};
-sharedButton.onclick=()=>{
-  if(!latest||busy) return;
-  if(bridge.getMeta().dirty&&!confirm('將載入共享版本；本機草稿會另存為備份。確定？')) return;
-  try{
-    if(bridge.getMeta().dirty) backupDraft();
-    autoRequested=false;clearTimeout(autoTimer);
-    bridge.apply(latest.rows,latest.version); sharedButton.hidden=true; message('已載入共享版本');
-  }catch(error){message('無法儲存草稿備份｜請先匯出備份');}
-};
 window.addEventListener('offline',()=>message('離線模式｜本機草稿保留'));
-recoverButton.onclick=async()=>{
-  if(busy||!navigator.onLine){message('請連網後取回草稿');return;}
-  await refresh();
-  if(!latest) return;
-  if(!confirm('取回本機草稿進行編輯；若之後同步，將以整份草稿取代目前共享行程。請先確認並保留朋友的新修改。確定取回？')) return;
-  try{
-    const draft=JSON.parse(localStorage.getItem(backupKey));
-    if(!validRows(draft)) throw new Error('invalid');
-    const current=bridge.getRows();
-    clearTimeout(autoTimer);
-    bridge.restoreDraft(draft,latest.version);
-    localStorage.setItem(backupKey,JSON.stringify(current));
-    autoRequested=false;
-    message('已取回本機草稿｜尚未發布，請確認內容後同步');
-  }catch(error){message('無法取回草稿｜備份仍保留');}
-};
 window.addEventListener('online',async()=>{
   await refresh();
   if(autoRequested) scheduleAutoPublish();
