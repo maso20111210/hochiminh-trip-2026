@@ -18,7 +18,6 @@ const sync=document.getElementById('syncBtn');
 const sharedButton=document.getElementById('sharedBtn');
 const recoverButton=document.getElementById('recoverBtn');
 const backupKey='hcm_itinerary_supermarkets_v1_draft_backup';
-let backedUp=false;
 recoverButton.hidden=!localStorage.getItem(backupKey);
 function backupDraft(){
   localStorage.setItem(backupKey,JSON.stringify(bridge.getRows()));
@@ -33,6 +32,9 @@ const message=text=>bridge.status(text);
 onAuthStateChanged(auth,user=>{
   login.textContent=user?'登出':'Google 登入';
   if(user&&!canPublish()) message('請驗證 Google 帳號｜本機草稿仍保留');
+  if(canPublish()&&latest&&bridge.getMeta().dirty&&bridge.getMeta().version===latest.version){
+    autoRequested=true;scheduleAutoPublish();
+  }
 });
 
 async function refresh(){
@@ -49,14 +51,11 @@ async function refresh(){
     latest={rows:parsed,version:data.version};
     const meta=bridge.getMeta();
     // Old localStorage edits are drafts, not permission to overwrite the shared version.
-    if(meta.version===null) bridge.setBase(data.version);
+    if(meta.version===null&&!meta.dirty) bridge.setBase(data.version);
     if(busy) return;
-    if(!bridge.isEditing()&&!autoRequested){
-      if(meta.dirty&&JSON.stringify(bridge.getRows())!==data.rowsJson){
-        backupDraft(); backedUp=true;
-      }
+    if(!meta.dirty&&!bridge.isEditing()&&!autoRequested){
       bridge.apply(parsed,data.version); sharedButton.hidden=true;
-      message(`共享行程已更新｜版本 ${data.version}${backedUp?'｜舊草稿已備份，可取回':''}`);
+      message(`共享行程已更新｜版本 ${data.version}`);
     }else if(JSON.stringify(bridge.getRows())===data.rowsJson){
       bridge.acknowledge(parsed,data.version); sharedButton.hidden=true;
       autoRequested=false;
@@ -64,6 +63,9 @@ async function refresh(){
     }else{
       sharedButton.hidden=false;
       message(meta.version!==null&&meta.version!==data.version?'共享行程有新版｜本機草稿保留':'本機草稿已儲存｜尚未同步');
+      if(meta.dirty&&meta.version===data.version&&canPublish()&&!autoRequested){
+        autoRequested=true;scheduleAutoPublish();
+      }
     }
   }catch(error){message('共享資料格式錯誤｜本機資料保留');}
   }catch(error){message('無法連線共享行程｜本機草稿仍保留');}
@@ -163,7 +165,7 @@ recoverButton.onclick=async()=>{
     clearTimeout(autoTimer);
     bridge.restoreDraft(draft,latest.version);
     localStorage.setItem(backupKey,JSON.stringify(current));
-    autoRequested=false; backedUp=false;
+    autoRequested=false;
     message('已取回本機草稿｜尚未發布，請確認內容後同步');
   }catch(error){message('無法取回草稿｜備份仍保留');}
 };
